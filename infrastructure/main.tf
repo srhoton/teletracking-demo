@@ -16,9 +16,28 @@ provider "aws" {
   region = "us-west-2"
 }
 
+variable "default_vpc_cidr" {
+  type = string
+}
+
+variable "blue_subnet_cidr" {
+  type = string
+}
+
+variable "red_subnet_cidr" {
+  type = string
+}
+
+variable "ami_id" {
+  type = string
+}
+
+variable "instance_type" {
+  type = string
+}
 
 resource "aws_vpc" "default_vpc" {
-  cidr_block = "172.31.0.0/16"
+  cidr_block = var.default_vpc_cidr
 }
 
 resource "aws_internet_gateway" "gw" {
@@ -27,7 +46,7 @@ resource "aws_internet_gateway" "gw" {
 
 resource "aws_subnet" "blue_subnet" {
   vpc_id     = aws_vpc.default_vpc.id
-  cidr_block = "172.31.0.0/20"
+  cidr_block = var.blue_subnet_cidr 
   map_public_ip_on_launch = true
 
   tags = {
@@ -37,7 +56,7 @@ resource "aws_subnet" "blue_subnet" {
 
 resource "aws_subnet" "red_subnet" {
   vpc_id     = aws_vpc.default_vpc.id
-  cidr_block = "172.31.32.0/20"
+  cidr_block = var.red_subnet_cidr
   map_public_ip_on_launch = true
 
   tags = {
@@ -114,8 +133,8 @@ data "template_file" "blue_data" {
 }
 
 resource "aws_instance" "blue_machine" {
-  ami           = "ami-0ca5c3bd5a268e7db"
-  instance_type = "t2.micro"
+  ami           = var.ami_id
+  instance_type = var.instance_type
   vpc_security_group_ids = [aws_security_group.ec2_security_group.id]
   subnet_id  = aws_subnet.blue_subnet.id
   key_name = "teletracking-demo"
@@ -127,8 +146,8 @@ data "template_file" "red_data" {
 }
 
 resource "aws_instance" "red_machine" {
-  ami           = "ami-0ca5c3bd5a268e7db"
-  instance_type = "t2.micro"
+  ami           = var.ami_id
+  instance_type = var.instance_type
   vpc_security_group_ids = [aws_security_group.ec2_security_group.id]
   subnet_id  = aws_subnet.red_subnet.id
   key_name = "teletracking-demo"
@@ -176,3 +195,12 @@ resource "aws_lb_listener" "teletracking_listener" {
     target_group_arn = aws_lb_target_group.alb_target_group.arn
   }
 }
+
+output "alb_arn" {
+  value = aws_lb.teletracking_lb.arn
+}
+
+output "target_group_arn" {
+  value = aws_lb_target_group.alb_target_group.arn
+}
+
